@@ -94,8 +94,25 @@ def _play_local(wav_bytes: bytes) -> None:
         pygame.time.Clock().tick(10)
 
 
+def _speak_say(text: str) -> None:
+    """Mac built-in TTS — no API key needed."""
+    import subprocess
+    subprocess.run(["say", "-v", "Samantha", text], check=False)
+
+
 def speak(text: str) -> None:
-    wav_bytes = synthesize(text)
+    provider = config.TTS_PROVIDER.lower()
+
+    if provider == "say":
+        _speak_say(text)
+        return
+
+    try:
+        wav_bytes = synthesize(text)
+    except Exception as e:
+        print(f"[TTS] {provider} failed ({e}) — falling back to say")
+        _speak_say(text)
+        return
 
     from reachy import controller
     if controller.is_connected():
