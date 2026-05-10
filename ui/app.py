@@ -181,6 +181,9 @@ INSTRUCTIONS_HTML = """
     <li>Head to <strong>Quiz</strong> when you're ready to be tested — choose Friendly, Standard, or Expert difficulty</li>
     <li>Customise the personality in <strong>Settings</strong> to change how your buddy talks to you</li>
   </ol>
+  <p style="margin-top:0.8rem; color:#7B6B7A; font-size:0.88rem;">
+    <strong>Note:</strong> uploaded documents are stored for your current session only and will clear if the app restarts. Re-upload your files each time, or run the app locally for permanent storage.
+  </p>
 </div>
 """
 
