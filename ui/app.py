@@ -11,16 +11,26 @@ theme = gr.themes.Soft(
     primary_hue=gr.themes.colors.pink,
     secondary_hue=gr.themes.colors.purple,
     neutral_hue=gr.themes.colors.slate,
-    font=gr.themes.GoogleFont("DM Sans"),
+    font=gr.themes.GoogleFont("Lexend"),
     font_mono=gr.themes.GoogleFont("DM Mono"),
 )
 
 CSS = """
 /* ── Base ── */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
 body, .gradio-container {
     background: #FBF7F4 !important;
     color: #2C2C2C !important;
+    font-family: 'Lexend', sans-serif !important;
 }
+
+/* ── Links ── */
+a, a:visited {
+    color: #A84D60 !important;
+    text-decoration: underline;
+}
+a:hover { color: #8B3D50 !important; }
 
 /* ── Header ── */
 .lb-header {
