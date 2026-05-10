@@ -38,7 +38,9 @@ GOOGLE_TTS_VOICE = os.getenv("GOOGLE_TTS_VOICE", "en-GB-Journey-F")
 REACHY_HOST = os.getenv("REACHY_HOST", "reachy.local")
 
 # --- Storage ---
-CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./data/chroma")
+# Default to /tmp so it works on HuggingFace Spaces (app dir is read-only)
+# Note: /tmp doesn't persist between Space restarts on the free tier
+CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "/tmp/learning-buddy-chroma")
 
 # --- STT ---
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")

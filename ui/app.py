@@ -326,10 +326,13 @@ def add_file(file, name, tags):
     from knowledge.store import add_document
     if file is None:
         return "No file selected.", _kb_status()
-    label = name.strip() or os.path.basename(file.name)
-    chunks, kind = ingest(file.name)
-    count = add_document(chunks, source=label, tags=[t.strip() for t in tags.split(",") if t.strip()])
-    return f"Added '{label}' — {count} chunks ({kind})", _kb_status()
+    try:
+        label = name.strip() or os.path.basename(file.name)
+        chunks, kind = ingest(file.name)
+        count = add_document(chunks, source=label, tags=[t.strip() for t in tags.split(",") if t.strip()])
+        return f"Added '{label}' — {count} chunks ({kind})", _kb_status()
+    except Exception as e:
+        return f"Error adding file: {e}", _kb_status()
 
 
 def add_url(url, name, tags):
@@ -365,8 +368,8 @@ def _kb_status() -> str:
             for s in sources
         )
         return f"{total} chunks across {len(sources)} source(s)\n\n{rows}"
-    except Exception:
-        return "Knowledge base not initialised yet."
+    except Exception as e:
+        return f"Knowledge base error: {e}"
 
 
 # ── Quiz ──────────────────────────────────────────────────────────────────────
