@@ -94,27 +94,49 @@ def _play_local(wav_bytes: bytes) -> None:
         pygame.time.Clock().tick(10)
 
 
-def _speak_say(text: str) -> None:
-    """Mac built-in TTS — no API key needed."""
-    import subprocess
-    subprocess.run(["say", "-v", "Samantha", text], check=False)
+def _speak_say(text: str) -> bytes | None:
+    """Mac built-in TTS — returns 16 kHz WAV bytes, or plays locally if conversion fails."""
+    import subprocess, tempfile, os
+
+    aiff = tempfile.mktemp(suffix=".aiff")
+    wav = tempfile.mktemp(suffix=".wav")
+    try:
+        subprocess.run(["say", "-v", "Samantha", "-o", aiff, text], check=True)
+        subprocess.run(
+            ["afconvert", "-f", "WAVE", "-d", "LEF32@16000", aiff, wav],
+            check=True,
+        )
+        with open(wav, "rb") as f:
+            return f.read()
+    except Exception as e:
+        print(f"[TTS] say conversion failed ({e}) — playing locally")
+        subprocess.run(["say", "-v", "Samantha", text], check=False)
+        return None
+    finally:
+        for p in (aiff, wav):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 def speak(text: str) -> None:
     provider = config.TTS_PROVIDER.lower()
 
-    if provider == "say":
-        _speak_say(text)
-        return
-
-    try:
-        wav_bytes = synthesize(text)
-    except Exception as e:
-        print(f"[TTS] {provider} failed ({e}) — falling back to say")
-        _speak_say(text)
-        return
-
     from reachy import controller
+
+    if provider == "say":
+        wav_bytes = _speak_say(text)
+    else:
+        try:
+            wav_bytes = synthesize(text)
+        except Exception as e:
+            print(f"[TTS] {provider} failed ({e}) — falling back to say")
+            wav_bytes = _speak_say(text)
+
+    if wav_bytes is None:
+        return  # already played locally by _speak_say fallback
+
     if controller.is_connected():
         controller.play_audio(wav_bytes)
     else:
