@@ -45,7 +45,7 @@ _DIFFICULTY_PROFILES = {
         ),
     },
     "viva": {
-        "label": "MSc Viva",
+        "label": "Expert",
         "question_instruction": (
             "Generate {count} rigorous examination-level questions as a dissertation supervisor "
             "would ask in a viva. Prioritise analysis, evaluation, and synthesis over recall. "

@@ -271,7 +271,7 @@ def _next_q(voice_on=False):
         score = _quiz_state["score"]
         avg = score / answered if answered else 0
         if difficulty == "viva":
-            medal = "First class 🎓" if avg >= 8 else "Merit 💜" if avg >= 6 else "Needs work 📚"
+            medal = "Expert level 🎓" if avg >= 8 else "Getting there 💜" if avg >= 6 else "Keep studying 📚"
         else:
             medal = "🌸 Excellent!" if avg >= 8 else "💜 Good effort!" if avg >= 5 else "🌷 Keep practising!"
         summary = f"### Quiz complete!\n**Score: {score}/{answered * 10}** ({avg:.0f}/10 average) — {medal}"
@@ -358,10 +358,10 @@ def build_ui() -> gr.Blocks:
 
                 gr.Markdown("### Difficulty")
                 quiz_difficulty = gr.Radio(
-                    choices=["Friendly", "Standard", "MSc Viva"],
+                    choices=["Friendly", "Standard", "Expert"],
                     value="Standard",
                     label="",
-                    info="Friendly = hints & encouragement · Standard = balanced · MSc Viva = examiner mode, no hints, follow-up questions",
+                    info="Friendly = hints & encouragement · Standard = balanced · Expert = deep questions, no hints, follow-up challenges",
                 )
                 quiz_voice = gr.Checkbox(value=False, label="Read questions aloud")
                 start_btn  = gr.Button("Start quiz ✨", variant="primary")
