@@ -214,7 +214,7 @@ def record_audio(duration: float = 6.0) -> "np.ndarray | None":
             samples = _reachy.media.get_audio_sample()
             if samples is not None:
                 chunks.append(samples)
-            time.sleep(0.05)
+            time.sleep(0.01)  # 10 ms — Reachy delivers chunks every ~20 ms
         print(f"[Reachy] Mic: collected {len(chunks)} chunks")
         if not chunks:
             print("[Reachy] Mic: no data — WebRTC audio may not be streaming from robot")
