@@ -15,12 +15,24 @@ _DEFAULT_MODELS = {
     "claude":    "claude-sonnet-4-6",
     "openai":    "gpt-4o",
     "gpt":       "gpt-4o",
+    "gemini":    "gemini-2.0-flash",
+    "google":    "gemini-2.0-flash",
 }
 AI_MODEL = os.getenv("AI_MODEL", _DEFAULT_MODELS.get(AI_PROVIDER.lower(), "claude-sonnet-4-6"))
 
+# Only the key for your chosen AI provider needs to be set
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
 # --- Voice ---
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "google")  # "google" or "elevenlabs"
+
+# ElevenLabs (if TTS_PROVIDER=elevenlabs)
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "XB0fDUnXU5powFXDhCwa")
+
+# Google TTS (if TTS_PROVIDER=google)
+# en-GB-Journey-F: warm, natural RP British female — very Keira Knightley
+GOOGLE_TTS_VOICE = os.getenv("GOOGLE_TTS_VOICE", "en-GB-Journey-F")
 
 # --- Hardware ---
 REACHY_HOST = os.getenv("REACHY_HOST", "reachy.local")
