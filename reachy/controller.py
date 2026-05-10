@@ -215,9 +215,12 @@ def record_audio(duration: float = 6.0) -> "np.ndarray | None":
             if samples is not None:
                 chunks.append(samples)
             time.sleep(0.05)
+        print(f"[Reachy] Mic: collected {len(chunks)} chunks")
         if not chunks:
+            print("[Reachy] Mic: no data — WebRTC audio may not be streaming from robot")
             return None
         audio = np.concatenate(chunks, axis=0)
+        print(f"[Reachy] Mic: audio shape={audio.shape}, max={np.abs(audio).max():.4f}")
         if audio.ndim == 2:
             audio = np.mean(audio, axis=1)
         return audio.astype(np.float32)
