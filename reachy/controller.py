@@ -143,3 +143,32 @@ def thinking_context():
         yield
     finally:
         speaking()
+
+
+def record_audio(duration: float = 6.0) -> "np.ndarray | None":
+    """Record audio from Reachy's built-in microphone array.
+
+    Returns mono float32 numpy array at 16 kHz, or None if unavailable.
+    """
+    if not _connected or not _reachy:
+        return None
+    try:
+        chunks = []
+        _reachy.media.start_recording()
+        deadline = time.time() + duration
+        while time.time() < deadline:
+            samples = _reachy.media.get_audio_sample()
+            if samples is not None:
+                chunks.append(samples)
+            time.sleep(0.05)
+        _reachy.media.stop_recording()
+        if not chunks:
+            return None
+        audio = np.concatenate(chunks, axis=0)
+        # Reachy mic is stereo — average to mono for Whisper
+        if audio.ndim == 2:
+            audio = np.mean(audio, axis=1)
+        return audio.astype(np.float32)
+    except Exception as e:
+        print(f"[Reachy] Mic error: {e}")
+        return None

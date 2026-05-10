@@ -3,15 +3,24 @@
 import threading
 from reachy import controller
 from ai.client import chat, reset_conversation
-from voice.stt import listen
+from voice.stt import transcribe, listen as local_listen
 from voice.tts import speak
+
+
+def _listen(duration: float) -> str:
+    """Record from Reachy's mic if connected, otherwise fall back to local mic."""
+    raw = controller.record_audio(duration=duration)
+    if raw is not None:
+        return transcribe(raw)
+    print("[Voice] Reachy mic unavailable — using local microphone")
+    return local_listen(duration=duration)
 
 
 def run(wake_word: str = "hey buddy", duration: float = 6.0):
     """
     Continuous loop:
-      1. Wait for wake word (or just listen continuously if no wake word)
-      2. Record and transcribe speech
+      1. Listen via Reachy's built-in microphone (falls back to local mic)
+      2. Transcribe with faster-whisper
       3. Get AI response
       4. Speak reply + animate Reachy
     Press Ctrl+C to stop.
@@ -23,7 +32,8 @@ def run(wake_word: str = "hey buddy", duration: float = 6.0):
     while True:
         try:
             controller.listening_pose()
-            text = listen(duration=duration)
+            print(f"[Listening for {duration:.0f}s...]")
+            text = _listen(duration=duration)
 
             if not text.strip():
                 continue
@@ -37,7 +47,6 @@ def run(wake_word: str = "hey buddy", duration: float = 6.0):
             controller.speaking()
             speak(reply)
 
-            # Physical reaction after speaking
             threading.Thread(target=controller.nod, args=(1,), daemon=True).start()
 
         except KeyboardInterrupt:
