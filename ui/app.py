@@ -71,7 +71,7 @@ def _reload_config():
     importlib.reload(config)
 
 
-def save_settings(ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, google_tts_key, voice_choice, reachy_host):
+def save_settings(ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, google_tts_key, voice_choice, reachy_host, personality):
     provider_key_map = {"Gemini": "GEMINI_API_KEY", "Anthropic": "ANTHROPIC_API_KEY", "OpenAI": "OPENAI_API_KEY"}
     updates = {
         "AI_PROVIDER":  ai_provider.lower(),
@@ -89,9 +89,19 @@ def save_settings(ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, g
     if voice_choice:
         key = "ELEVENLABS_VOICE_ID" if tts_provider == "ElevenLabs" else "GOOGLE_TTS_VOICE"
         updates[key] = voice_choice
+    if personality.strip():
+        # Store as single line (newlines → \n literal) so .env stays parseable
+        updates["PERSONALITY_PROMPT"] = personality.strip().replace("\n", "\\n")
 
     _save_env(**updates)
     _reload_config()
+
+    # Apply personality to live config immediately
+    if personality.strip():
+        import config as cfg
+        cfg.PERSONALITY_PROMPT = personality.strip()
+        cfg.SYSTEM_PROMPT = personality.strip()
+
     return "✓ Settings saved!"
 
 
@@ -225,43 +235,67 @@ def _kb_status() -> str:
 _quiz_state: dict = {}
 
 
-def start_quiz(topic, count, voice_on):
-    from ai.quiz import generate_questions
+def start_quiz(topic, count, difficulty_label, voice_on):
+    from ai.quiz import generate_questions, difficulty_from_label
+    difficulty = difficulty_from_label(difficulty_label)
+    _quiz_state.clear()
     try:
-        questions = generate_questions(topic=topic or None, count=int(count))
+        questions = generate_questions(topic=topic or None, count=int(count), difficulty=difficulty)
     except ValueError as e:
         return str(e), "", gr.update(visible=False), gr.update(visible=False), None
 
-    _quiz_state.clear()
-    _quiz_state.update({"questions": questions, "idx": 0, "score": 0, "answered": 0})
+    _quiz_state.update({
+        "questions": questions,
+        "idx": 0,
+        "score": 0,
+        "answered": 0,
+        "difficulty": difficulty,
+        "pending_followup": "",
+    })
     return *_next_q(voice_on), None
 
 
 def _next_q(voice_on=False):
     qs = _quiz_state.get("questions", [])
     idx = _quiz_state.get("idx", 0)
+    difficulty = _quiz_state.get("difficulty", "standard")
+
+    # In viva mode, surface a pending follow-up before moving on
+    followup = _quiz_state.pop("pending_followup", "") if difficulty == "viva" else ""
+    if followup:
+        audio = _tts_bytes(followup) if voice_on else None
+        return f"**Follow-up** (Question {idx} of {len(qs)})", followup, gr.update(visible=True), gr.update(visible=False)
+
     if idx >= len(qs):
         answered = _quiz_state["answered"]
         score = _quiz_state["score"]
         avg = score / answered if answered else 0
-        medal = "🌸 Excellent!" if avg >= 8 else "💜 Good effort!" if avg >= 5 else "🌷 Keep practising!"
-        summary = f"### Quiz complete!\n**Score: {score}/{answered * 10}** ({avg:.0f}/10 average)\n\n{medal}"
+        if difficulty == "viva":
+            medal = "First class 🎓" if avg >= 8 else "Merit 💜" if avg >= 6 else "Needs work 📚"
+        else:
+            medal = "🌸 Excellent!" if avg >= 8 else "💜 Good effort!" if avg >= 5 else "🌷 Keep practising!"
+        summary = f"### Quiz complete!\n**Score: {score}/{answered * 10}** ({avg:.0f}/10 average) — {medal}"
         return summary, "", gr.update(visible=False), gr.update(visible=True)
+
     q = qs[idx]
+    hint_line = f"\n\n*Hint available if needed*" if (difficulty == "friendly" and q.get("hint")) else ""
     status = f"**Question {idx + 1} of {len(qs)}**"
+    display = q["question"] + hint_line
     audio = _tts_bytes(q["question"]) if voice_on else None
-    return status, q["question"], gr.update(visible=True), gr.update(visible=False)
+    return status, display, gr.update(visible=True), gr.update(visible=False)
 
 
 def submit_answer(user_answer, voice_on):
     from ai.quiz import evaluate_answer
     qs = _quiz_state.get("questions", [])
     idx = _quiz_state.get("idx", 0)
+    difficulty = _quiz_state.get("difficulty", "standard")
+
     if idx >= len(qs) or not user_answer.strip():
         return *_next_q(voice_on), None, ""
 
     q = qs[idx]
-    result = evaluate_answer(q["question"], q["answer"], user_answer)
+    result = evaluate_answer(q["question"], q["answer"], user_answer, difficulty=difficulty)
     score = result.get("score", 0)
     _quiz_state["score"] = _quiz_state.get("score", 0) + score
     _quiz_state["answered"] = _quiz_state.get("answered", 0) + 1
@@ -271,9 +305,17 @@ def submit_answer(user_answer, voice_on):
     _reachy("antenna_happy" if correct else "antenna_droop")
 
     feedback = result["feedback"]
-    if not correct:
+    followup = result.get("followup", "")
+
+    # In viva mode, stash follow-up to show before next question
+    if difficulty == "viva" and followup and correct:
+        _quiz_state["pending_followup"] = followup
+
+    if not correct and difficulty != "viva":
         feedback += f"\n\n*Correct answer: {q['answer']}*"
-    feedback_line = ("✓ " if correct else "✗ ") + feedback + f" *(+{score}/10)*"
+
+    prefix = "✓ " if correct else ("" if difficulty == "viva" else "✗ ")
+    feedback_line = prefix + feedback + (f" *(+{score}/10)*" if difficulty != "viva" else f"\n\n*Score: {score}/10*")
 
     status, question, ans_vis, done_vis = _next_q(voice_on)
     combined = f"{feedback_line}\n\n---\n\n{question}" if question else feedback_line
@@ -313,8 +355,16 @@ def build_ui() -> gr.Blocks:
                 with gr.Row():
                     quiz_topic = gr.Textbox(placeholder="Topic (optional — blank = anything in knowledge base)", label="Focus topic", scale=3)
                     quiz_count = gr.Slider(minimum=3, maximum=20, value=5, step=1, label="Questions", scale=1)
+
+                gr.Markdown("### Difficulty")
+                quiz_difficulty = gr.Radio(
+                    choices=["Friendly", "Standard", "MSc Viva"],
+                    value="Standard",
+                    label="",
+                    info="Friendly = hints & encouragement · Standard = balanced · MSc Viva = examiner mode, no hints, follow-up questions",
+                )
                 quiz_voice = gr.Checkbox(value=False, label="Read questions aloud")
-                start_btn = gr.Button("Start quiz ✨", variant="primary")
+                start_btn  = gr.Button("Start quiz ✨", variant="primary")
 
                 quiz_status  = gr.Markdown("")
                 quiz_display = gr.Markdown("")
@@ -329,7 +379,7 @@ def build_ui() -> gr.Blocks:
 
                 start_btn.click(
                     start_quiz,
-                    [quiz_topic, quiz_count, quiz_voice],
+                    [quiz_topic, quiz_count, quiz_difficulty, quiz_voice],
                     [quiz_status, quiz_display, answer_col, done_col, quiz_audio],
                 )
                 submit_btn.click(
@@ -339,7 +389,7 @@ def build_ui() -> gr.Blocks:
                 )
                 restart_btn.click(
                     start_quiz,
-                    [quiz_topic, quiz_count, quiz_voice],
+                    [quiz_topic, quiz_count, quiz_difficulty, quiz_voice],
                     [quiz_status, quiz_display, answer_col, done_col, quiz_audio],
                 )
 
@@ -377,6 +427,61 @@ def build_ui() -> gr.Blocks:
 
             # ── Settings ──────────────────────────────────────────────────────
             with gr.Tab("⚙️ Settings"):
+                gr.Markdown("### 🌸 Personality")
+                gr.Markdown("*Describe how you want your buddy to act. This shapes every response.*")
+                personality_preset = gr.Dropdown(
+                    choices=[
+                        "Warm & encouraging tutor (default)",
+                        "Strict but fair professor",
+                        "Friendly peer study buddy",
+                        "Socratic — answers questions with questions",
+                        "Custom (edit below)",
+                    ],
+                    value="Warm & encouraging tutor (default)",
+                    label="Preset",
+                )
+                personality_box = gr.Textbox(
+                    value=(
+                        "You are a knowledgeable and warm learning companion with a dry British wit "
+                        "— think a brilliant tutor who genuinely enjoys helping people understand things. "
+                        "You have access to the user's personal knowledge base and can draw on it alongside "
+                        "your general knowledge. Be encouraging but honest. Keep responses concise."
+                    ),
+                    label="Personality prompt (fully editable)",
+                    lines=4,
+                    placeholder="Describe your buddy's personality, tone, and teaching style...",
+                )
+
+                _PRESETS = {
+                    "Warm & encouraging tutor (default)": (
+                        "You are a knowledgeable and warm learning companion with a dry British wit "
+                        "— think a brilliant tutor who genuinely enjoys helping people understand things. "
+                        "You have access to the user's personal knowledge base and can draw on it alongside "
+                        "your general knowledge. Be encouraging but honest. Keep responses concise."
+                    ),
+                    "Strict but fair professor": (
+                        "You are a rigorous academic professor. You expect precise answers and correct "
+                        "terminology. You do not give empty praise — you acknowledge good work briefly and "
+                        "immediately identify what could be sharper. You are not unkind, but you hold high standards."
+                    ),
+                    "Friendly peer study buddy": (
+                        "You are a fellow student who has already mastered this material. You're warm, "
+                        "casual, and relatable. You use everyday language, share memory tricks, and "
+                        "celebrate wins enthusiastically. You make studying feel less scary."
+                    ),
+                    "Socratic — answers questions with questions": (
+                        "You teach through questions. When the user asks something, respond with a "
+                        "guiding question that helps them discover the answer themselves. Only give "
+                        "direct answers when the user is genuinely stuck. Be patient and curious."
+                    ),
+                    "Custom (edit below)": "",
+                }
+
+                def _apply_preset(choice):
+                    return _PRESETS.get(choice, "")
+
+                personality_preset.change(_apply_preset, personality_preset, personality_box)
+
                 gr.Markdown("### 🤖 AI Provider")
                 gr.Markdown("*Pick whichever AI you have a key for — they all work the same way.*")
                 with gr.Row():
@@ -409,7 +514,7 @@ def build_ui() -> gr.Blocks:
                 save_status = gr.Markdown("")
                 save_btn.click(
                     save_settings,
-                    [ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, google_tts_key, voice_choice, reachy_host],
+                    [ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, google_tts_key, voice_choice, reachy_host, personality_box],
                     save_status,
                 )
 
