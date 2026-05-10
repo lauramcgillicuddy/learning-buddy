@@ -2,6 +2,7 @@
 
 import os
 import io
+import tempfile
 import threading
 import gradio as gr
 
@@ -105,12 +106,14 @@ def save_settings(ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, g
     return "✓ Settings saved!"
 
 
-# ── TTS — returns audio bytes for Gradio's Audio component ───────────────────
+# ── TTS — returns a temp file path for Gradio 5's Audio component ────────────
 
-def _tts_bytes(text: str) -> bytes | None:
-    """Return MP3 bytes or None if TTS is not configured."""
+def _tts_file(text: str) -> str | None:
+    """Synthesise speech and return a temp .mp3 path, or None if not configured."""
     try:
         import config
+        audio_bytes: bytes | None = None
+
         match config.TTS_PROVIDER.lower():
             case "google":
                 if not config.GOOGLE_TTS_VOICE:
@@ -127,23 +130,29 @@ def _tts_bytes(text: str) -> bytes | None:
                         audio_encoding=texttospeech.AudioEncoding.MP3,
                     ),
                 )
-                return resp.audio_content
+                audio_bytes = resp.audio_content
             case "elevenlabs":
                 if not config.ELEVENLABS_API_KEY:
                     return None
                 from elevenlabs.client import ElevenLabs
                 from elevenlabs import VoiceSettings
                 client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
-                audio = client.text_to_speech.convert(
+                audio_bytes = bytes(client.text_to_speech.convert(
                     voice_id=config.ELEVENLABS_VOICE_ID,
                     text=text,
                     model_id="eleven_turbo_v2",
                     voice_settings=VoiceSettings(stability=0.55, similarity_boost=0.80),
                     output_format="mp3_22050_32",
-                )
-                return bytes(audio)
+                ))
+
+        if audio_bytes:
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+            tmp.write(audio_bytes)
+            tmp.close()
+            return tmp.name
     except Exception:
-        return None
+        pass
+    return None
 
 
 def _reachy(fn_name: str, *args):
@@ -169,9 +178,9 @@ def chat_respond(message, history, use_kb, voice_on):
     reply = chat(message, use_knowledge=use_kb)
 
     _reachy("antenna_happy")
-    history = history + [(message, reply)]
-    audio = _tts_bytes(reply) if voice_on else None
-    return history, "", (22050, audio) if audio else None
+    history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": reply}]
+    audio = _tts_file(reply) if voice_on else None
+    return history, "", audio
 
 
 def reset_chat():
@@ -263,7 +272,7 @@ def _next_q(voice_on=False):
     # In viva mode, surface a pending follow-up before moving on
     followup = _quiz_state.pop("pending_followup", "") if difficulty == "viva" else ""
     if followup:
-        audio = _tts_bytes(followup) if voice_on else None
+        audio = _tts_file(followup) if voice_on else None
         return f"**Follow-up** (Question {idx} of {len(qs)})", followup, gr.update(visible=True), gr.update(visible=False)
 
     if idx >= len(qs):
@@ -281,7 +290,7 @@ def _next_q(voice_on=False):
     hint_line = f"\n\n*Hint available if needed*" if (difficulty == "friendly" and q.get("hint")) else ""
     status = f"**Question {idx + 1} of {len(qs)}**"
     display = q["question"] + hint_line
-    audio = _tts_bytes(q["question"]) if voice_on else None
+    audio = _tts_file(q["question"]) if voice_on else None
     return status, display, gr.update(visible=True), gr.update(visible=False)
 
 
@@ -319,7 +328,7 @@ def submit_answer(user_answer, voice_on):
 
     status, question, ans_vis, done_vis = _next_q(voice_on)
     combined = f"{feedback_line}\n\n---\n\n{question}" if question else feedback_line
-    audio = _tts_bytes(feedback) if voice_on else None
+    audio = _tts_file(feedback) if voice_on else None
     return status, combined, ans_vis, done_vis, audio, ""
 
 
@@ -336,7 +345,7 @@ def build_ui() -> gr.Blocks:
 
             # ── Chat ──────────────────────────────────────────────────────────
             with gr.Tab("💬 Chat"):
-                chatbot = gr.Chatbot(label="", height=400, bubble_full_width=False)
+                chatbot = gr.Chatbot(label="", height=400, bubble_full_width=False, type="messages")
                 audio_out = gr.Audio(label="", autoplay=True, visible=True, show_download_button=False)
                 with gr.Row():
                     msg_box = gr.Textbox(placeholder="Ask me anything...", show_label=False, scale=5)
