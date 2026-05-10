@@ -3,14 +3,33 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-ELEVENLABS_API_KEY = os.environ["ELEVENLABS_API_KEY"]
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "XB0fDUnXU5powFXDhCwa")
-REACHY_HOST = os.getenv("REACHY_HOST", "reachy.local")
-CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./data/chroma")
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
+# --- AI provider ---
+AI_PROVIDER = os.getenv("AI_PROVIDER", "anthropic")  # "anthropic" or "openai"
 
-CLAUDE_MODEL = "claude-sonnet-4-6"
+# Only the key for your chosen provider needs to be set
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+_DEFAULT_MODELS = {
+    "anthropic": "claude-sonnet-4-6",
+    "claude":    "claude-sonnet-4-6",
+    "openai":    "gpt-4o",
+    "gpt":       "gpt-4o",
+}
+AI_MODEL = os.getenv("AI_MODEL", _DEFAULT_MODELS.get(AI_PROVIDER.lower(), "claude-sonnet-4-6"))
+
+# --- Voice ---
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "XB0fDUnXU5powFXDhCwa")
+
+# --- Hardware ---
+REACHY_HOST = os.getenv("REACHY_HOST", "reachy.local")
+
+# --- Storage ---
+CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./data/chroma")
+
+# --- STT ---
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 
 SYSTEM_PROMPT = """\
 You are a knowledgeable and warm learning companion with a dry British wit \

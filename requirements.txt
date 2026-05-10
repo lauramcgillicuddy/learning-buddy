@@ -1,5 +1,6 @@
 # Core AI
 anthropic>=0.40.0
+openai>=1.40.0
 
 # Vector store & embeddings
 chromadb>=0.5.0

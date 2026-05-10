@@ -70,7 +70,7 @@ def chat_mode(
     no_knowledge: bool = typer.Option(False, "--no-kb", help="Disable knowledge base context"),
 ):
     """Start a conversation with your learning buddy."""
-    from ai.claude_client import chat, reset_conversation
+    from ai.client import chat, reset_conversation, provider_name
     from reachy import controller
 
     use_knowledge = not no_knowledge
@@ -79,7 +79,7 @@ def chat_mode(
 
     console.print(Panel(
         "[bold cyan]Learning Buddy[/bold cyan] — type [bold]/quit[/bold] to exit, [bold]/reset[/bold] to start fresh",
-        subtitle="voice mode ON" if voice else "text mode",
+        subtitle=f"{'voice mode ON' if voice else 'text mode'} · {provider_name()}",
     ))
 
     while True:
