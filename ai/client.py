@@ -31,7 +31,7 @@ def chat(user_message: str, use_knowledge: bool = True) -> str:
     reply = provider.chat(
         user_message=user_message,
         history=_history,
-        system=config.SYSTEM_PROMPT,
+        system=config.PERSONALITY_PROMPT,  # live-reloadable from UI
         context=rag_context,
     )
 

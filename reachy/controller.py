@@ -92,8 +92,48 @@ def listening_pose() -> None:
     _safe(_do)
 
 
-@contextmanager
-def thinking_context():
+def antenna_happy() -> None:
+    """Wiggle antennas for excitement / correct answer."""
+    def _do():
+        for _ in range(3):
+            _reachy.joints["l_antenna"].goal_position = 30
+            _reachy.joints["r_antenna"].goal_position = -30
+            time.sleep(0.15)
+            _reachy.joints["l_antenna"].goal_position = -30
+            _reachy.joints["r_antenna"].goal_position = 30
+            time.sleep(0.15)
+        _reachy.joints["l_antenna"].goal_position = 0
+        _reachy.joints["r_antenna"].goal_position = 0
+    _safe(_do)
+
+
+def antenna_droop() -> None:
+    """Droop antennas for wrong answer / sad."""
+    def _do():
+        _reachy.joints["l_antenna"].goal_position = -45
+        _reachy.joints["r_antenna"].goal_position = -45
+        time.sleep(1.0)
+        _reachy.joints["l_antenna"].goal_position = 0
+        _reachy.joints["r_antenna"].goal_position = 0
+    _safe(_do)
+
+
+def antenna_thinking() -> None:
+    """Slow antenna sway while processing."""
+    def _do():
+        for _ in range(2):
+            _reachy.joints["l_antenna"].goal_position = 15
+            _reachy.joints["r_antenna"].goal_position = 15
+            time.sleep(0.4)
+            _reachy.joints["l_antenna"].goal_position = -15
+            _reachy.joints["r_antenna"].goal_position = -15
+            time.sleep(0.4)
+        _reachy.joints["l_antenna"].goal_position = 0
+        _reachy.joints["r_antenna"].goal_position = 0
+    _safe(_do)
+
+
+
     """Context manager: tilt while in block, return to neutral after."""
     thinking()
     try:
