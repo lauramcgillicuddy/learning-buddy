@@ -176,13 +176,15 @@ INSTRUCTIONS_HTML = """
   <strong>How to use Learning Buddy</strong>
   <ol>
     <li>Go to <strong>Settings</strong> and paste your AI provider key (Gemini is free to start — get one at aistudio.google.com)</li>
-    <li>Start chatting in <strong>Chat</strong> — no documents needed, it will teach you anything from general knowledge</li>
-    <li>Upload your own notes, papers or textbooks in <strong>Knowledge Base</strong> to quiz yourself on your specific material</li>
-    <li>Head to <strong>Quiz</strong> when you're ready to be tested — choose Friendly, Standard, or Expert difficulty</li>
-    <li>Customise the personality in <strong>Settings</strong> to change how your buddy talks to you</li>
+    <li>Upload your notes, papers or textbooks in <strong>Knowledge Base</strong> to make Learning Buddy an expert on your material</li>
+    <li>Head to <strong>Quiz</strong> to be tested — choose Friendly, Standard, or Expert difficulty</li>
+    <li>Customise the personality in <strong>Settings</strong> to change how your buddy sounds and teaches</li>
   </ol>
   <p style="margin-top:0.8rem; color:#7B6B7A; font-size:0.88rem;">
-    <strong>Note:</strong> uploaded documents are stored for your current session only and will clear if the app restarts. Re-upload your files each time, or run the app locally for permanent storage.
+    <strong>Running with a Reachy Mini?</strong> Use <code>python main.py listen</code> locally — just talk to it directly, no typing needed.
+  </p>
+  <p style="margin-top:0.4rem; color:#7B6B7A; font-size:0.88rem;">
+    <strong>Note:</strong> uploaded documents are stored for your current session only and will clear if the app restarts.
   </p>
 </div>
 """
@@ -499,38 +501,6 @@ def build_ui() -> gr.Blocks:
             gr.HTML(INSTRUCTIONS_HTML)
 
         with gr.Tabs():
-
-            # ── Chat ──────────────────────────────────────────────────────────
-            with gr.Tab("Chat"):
-                chatbot = gr.Chatbot(
-                    label="",
-                    height=420,
-                    bubble_full_width=False,
-                    type="messages",
-                    placeholder="Your conversation will appear here. Ask me anything to get started.",
-                )
-                audio_out = gr.Audio(
-                    label="Voice response",
-                    autoplay=True,
-                    visible=True,
-                    show_download_button=False,
-                )
-                with gr.Row():
-                    msg_box = gr.Textbox(
-                        placeholder="Ask me anything...",
-                        show_label=False,
-                        scale=5,
-                        lines=1,
-                    )
-                    send_btn = gr.Button("Send", variant="primary", scale=1)
-                with gr.Row():
-                    use_kb = gr.Checkbox(value=True, label="Use my knowledge base")
-                    voice_on = gr.Checkbox(value=False, label="Voice responses")
-                    reset_btn = gr.Button("Clear conversation", variant="secondary")
-
-                send_btn.click(chat_respond, [msg_box, chatbot, use_kb, voice_on], [chatbot, msg_box, audio_out])
-                msg_box.submit(chat_respond, [msg_box, chatbot, use_kb, voice_on], [chatbot, msg_box, audio_out])
-                reset_btn.click(reset_chat, outputs=[chatbot, msg_box, audio_out])
 
             # ── Quiz ──────────────────────────────────────────────────────────
             with gr.Tab("Quiz"):
