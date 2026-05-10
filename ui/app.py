@@ -66,17 +66,27 @@ a:hover { color: #8B3D50 !important; }
 .lb-instructions li { margin-bottom: 0.4rem; }
 
 /* ── Tabs ── */
-.tab-nav { border-bottom: 2px solid #EDD5DC !important; }
-.tab-nav button {
+.tab-nav,
+div[role="tablist"] {
+    border-bottom: 2px solid #EDD5DC !important;
+}
+.tab-nav button,
+div[role="tablist"] button,
+button[role="tab"] {
     font-weight: 500 !important;
-    color: #7B6B7A !important;
+    color: #A84D60 !important;
     font-size: 0.9rem !important;
     padding: 0.6rem 1.1rem !important;
+    background: transparent !important;
+    opacity: 1 !important;
 }
-.tab-nav button.selected {
+.tab-nav button.selected,
+div[role="tablist"] button[aria-selected="true"],
+button[role="tab"][aria-selected="true"] {
     color: #C4687A !important;
     border-bottom: 2px solid #C4687A !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    background: transparent !important;
 }
 
 /* ── Blocks / panels ── */
