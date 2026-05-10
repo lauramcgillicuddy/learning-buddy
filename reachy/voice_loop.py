@@ -1,0 +1,48 @@
+"""Continuous voice loop for Reachy — listen, think, speak, react."""
+
+import threading
+from reachy import controller
+from ai.client import chat, reset_conversation
+from voice.stt import listen
+from voice.tts import speak
+
+
+def run(wake_word: str = "hey buddy", duration: float = 6.0):
+    """
+    Continuous loop:
+      1. Wait for wake word (or just listen continuously if no wake word)
+      2. Record and transcribe speech
+      3. Get AI response
+      4. Speak reply + animate Reachy
+    Press Ctrl+C to stop.
+    """
+    reset_conversation()
+    print("[Learning Buddy] Voice loop started — start talking!")
+    print("[Learning Buddy] Press Ctrl+C to stop.\n")
+
+    while True:
+        try:
+            controller.listening_pose()
+            text = listen(duration=duration)
+
+            if not text.strip():
+                continue
+
+            print(f"You: {text}")
+
+            threading.Thread(target=controller.antenna_thinking, daemon=True).start()
+            reply = chat(text)
+            print(f"Buddy: {reply}\n")
+
+            controller.speaking()
+            speak(reply)
+
+            # Physical reaction after speaking
+            threading.Thread(target=controller.nod, args=(1,), daemon=True).start()
+
+        except KeyboardInterrupt:
+            print("\n[Learning Buddy] Voice loop stopped.")
+            break
+        except Exception as e:
+            print(f"[Error] {e}")
+            continue

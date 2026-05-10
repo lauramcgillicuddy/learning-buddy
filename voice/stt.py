@@ -1,24 +1,22 @@
-"""Speech-to-text using local Whisper model."""
+"""Speech-to-text using faster-whisper — no LLVM required."""
 
-import io
 import numpy as np
 import sounddevice as sd
-import whisper
 
 import config
 
-_model: whisper.Whisper | None = None
+_model = None
 
 
-def _load_model() -> whisper.Whisper:
+def _load_model():
     global _model
     if _model is None:
-        _model = whisper.load_model(config.WHISPER_MODEL)
+        from faster_whisper import WhisperModel
+        _model = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
     return _model
 
 
 def record(duration: float = 5.0, sample_rate: int = 16000) -> np.ndarray:
-    """Record audio from the default microphone for the given duration."""
     print(f"[Listening for {duration:.0f}s...]")
     audio = sd.rec(
         int(duration * sample_rate),
@@ -31,12 +29,10 @@ def record(duration: float = 5.0, sample_rate: int = 16000) -> np.ndarray:
 
 
 def transcribe(audio: np.ndarray) -> str:
-    """Transcribe a numpy float32 audio array to text."""
     model = _load_model()
-    result = model.transcribe(audio, language="en", fp16=False)
-    return result["text"].strip()
+    segments, _ = model.transcribe(audio, language="en")
+    return " ".join(s.text for s in segments).strip()
 
 
 def listen(duration: float = 5.0) -> str:
-    """Record and transcribe in one call."""
     return transcribe(record(duration))
