@@ -13,8 +13,11 @@ def get_provider() -> AIProvider:
         case "openai" | "gpt":
             from .openai_provider import OpenAIProvider
             return OpenAIProvider(api_key=config.OPENAI_API_KEY, model=config.AI_MODEL)
+        case "gemini" | "google":
+            from .gemini_provider import GeminiProvider
+            return GeminiProvider(api_key=config.GEMINI_API_KEY, model=config.AI_MODEL)
         case other:
             raise ValueError(
                 f"Unknown AI_PROVIDER '{other}'. "
-                "Supported values: anthropic, openai"
+                "Supported values: anthropic, openai, gemini"
             )
