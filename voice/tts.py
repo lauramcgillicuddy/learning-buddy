@@ -101,7 +101,7 @@ def _speak_say(text: str) -> bytes | None:
     aiff = tempfile.mktemp(suffix=".aiff")
     wav = tempfile.mktemp(suffix=".wav")
     try:
-        subprocess.run(["say", "-v", "Samantha", "-o", aiff, text], check=True)
+        subprocess.run(["say", "-v", "Serena", "-o", aiff, text], check=True)
         subprocess.run(
             ["afconvert", "-f", "WAVE", "-d", "LEF32@16000", aiff, wav],
             check=True,
@@ -110,7 +110,7 @@ def _speak_say(text: str) -> bytes | None:
             return f.read()
     except Exception as e:
         print(f"[TTS] say conversion failed ({e}) — playing locally")
-        subprocess.run(["say", "-v", "Samantha", text], check=False)
+        subprocess.run(["say", "-v", "Serena", text], check=False)
         return None
     finally:
         for p in (aiff, wav):
