@@ -1,47 +1,166 @@
-"""Gradio web UI for Learning Buddy — pastel theme, HuggingFace Spaces compatible."""
+"""Gradio web UI for Learning Buddy — polished pastel, HuggingFace Spaces compatible."""
 
 import os
-import io
 import tempfile
 import threading
 import gradio as gr
 
-# ── Pastel theme ──────────────────────────────────────────────────────────────
+# ── Theme ─────────────────────────────────────────────────────────────────────
+# Gradio 5 Soft base, overridden with a warm pastel palette
 theme = gr.themes.Soft(
     primary_hue=gr.themes.colors.pink,
     secondary_hue=gr.themes.colors.purple,
-    neutral_hue=gr.themes.colors.zinc,
+    neutral_hue=gr.themes.colors.slate,
     font=gr.themes.GoogleFont("DM Sans"),
-).set(
-    body_background_fill="#FFF5F7",
-    body_background_fill_dark="#FFF5F7",
-    block_background_fill="#FFFFFF",
-    block_border_color="#F8C8D4",
-    button_primary_background_fill="#F4A7B9",
-    button_primary_background_fill_hover="#EF7FA0",
-    button_primary_text_color="#FFFFFF",
-    button_secondary_background_fill="#E8D5F5",
-    button_secondary_background_fill_hover="#D8B4F8",
-    button_secondary_text_color="#5B21B6",
-    input_background_fill="#FFF0F5",
-    input_border_color="#F4A7B9",
-    slider_color="#F4A7B9",
+    font_mono=gr.themes.GoogleFont("DM Mono"),
 )
 
 CSS = """
-h1 { color: #be185d !important; }
-h3 { color: #7c3aed !important; }
-.tab-nav button { font-weight: 600; }
-.tab-nav button.selected { color: #be185d !important; border-bottom-color: #F4A7B9 !important; }
-.welcome-box { background: linear-gradient(135deg, #FFF0F5, #F3E8FF); border-radius: 12px; padding: 1.2rem; border: 1px solid #F4A7B9; }
+/* ── Base ── */
+body, .gradio-container {
+    background: #FBF7F4 !important;
+    color: #2C2C2C !important;
+}
+
+/* ── Header ── */
+.lb-header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+}
+.lb-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #C4687A !important;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.02em;
+}
+.lb-header p {
+    color: #7B6B7A;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* ── Instructions card ── */
+.lb-instructions {
+    background: #FFFFFF;
+    border: 1px solid #EDD5DC;
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 0.5rem;
+    color: #2C2C2C !important;
+    line-height: 1.7;
+    font-size: 0.92rem;
+}
+.lb-instructions strong { color: #C4687A; }
+.lb-instructions ol { padding-left: 1.2rem; margin: 0.6rem 0 0; }
+.lb-instructions li { margin-bottom: 0.4rem; }
+
+/* ── Tabs ── */
+.tab-nav { border-bottom: 2px solid #EDD5DC !important; }
+.tab-nav button {
+    font-weight: 500 !important;
+    color: #7B6B7A !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 1.1rem !important;
+}
+.tab-nav button.selected {
+    color: #C4687A !important;
+    border-bottom: 2px solid #C4687A !important;
+    font-weight: 600 !important;
+}
+
+/* ── Blocks / panels ── */
+.gr-block, .gr-box, .block {
+    border-color: #EDD5DC !important;
+    border-radius: 10px !important;
+    background: #FFFFFF !important;
+}
+
+/* ── Labels and text ── */
+label, .gr-label, span.svelte-1gfkn6j {
+    color: #2C2C2C !important;
+    font-weight: 500;
+}
+p, li, .prose { color: #2C2C2C !important; }
+.gr-markdown { color: #2C2C2C !important; }
+
+/* ── Inputs ── */
+input, textarea, select, .gr-input, .gr-textarea {
+    background: #FDF5F7 !important;
+    border-color: #DEC8D0 !important;
+    color: #2C2C2C !important;
+    border-radius: 8px !important;
+}
+input::placeholder, textarea::placeholder { color: #A8909A !important; }
+
+/* ── Buttons ── */
+.gr-button-primary, button.primary {
+    background: #C4687A !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+.gr-button-primary:hover, button.primary:hover {
+    background: #AD576A !important;
+}
+.gr-button-secondary, button.secondary {
+    background: #EDE0F0 !important;
+    color: #6B4E82 !important;
+    border: 1px solid #D4B8E0 !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+.gr-button-stop, button.stop {
+    background: #F5E0E3 !important;
+    color: #A03040 !important;
+    border: 1px solid #E0B8C0 !important;
+    border-radius: 8px !important;
+}
+
+/* ── Chatbot ── */
+.gr-chatbot {
+    background: #FEFCFC !important;
+    border-color: #EDD5DC !important;
+    border-radius: 10px !important;
+}
+
+/* ── Section headings inside tabs ── */
+.tab-content h3 {
+    color: #6B4E82 !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    margin-top: 1.2rem !important;
+    margin-bottom: 0.3rem !important;
+    letter-spacing: 0.01em;
+}
+
+/* ── Feedback / status text ── */
+.gr-markdown p { color: #2C2C2C !important; }
+
+/* ── Radio buttons ── */
+.gr-radio label { color: #2C2C2C !important; }
+
+/* ── Slider ── */
+.gr-slider input[type=range] { accent-color: #C4687A; }
+
+/* ── Audio player ── */
+.gr-audio { border-color: #EDD5DC !important; }
+
+/* ── Hide Gradio footer ── */
 footer { display: none !important; }
 """
 
-WELCOME = """
-<div class="welcome-box">
-<b>Welcome! 🌸</b> I can teach you <i>anything</i> using my general knowledge — no setup needed.<br>
-Upload your own documents (thesis, notes, papers) in the <b>📚 Knowledge Base</b> tab to make me an expert on <i>your</i> material.<br>
-Add your API keys in <b>⚙️ Settings</b> and optionally enable voice responses.
+INSTRUCTIONS_HTML = """
+<div class="lb-instructions">
+  <strong>How to use Learning Buddy</strong>
+  <ol>
+    <li>Go to <strong>Settings</strong> and paste your AI provider key (Gemini is free to start — get one at aistudio.google.com)</li>
+    <li>Start chatting in <strong>Chat</strong> — no documents needed, it will teach you anything from general knowledge</li>
+    <li>Upload your own notes, papers or textbooks in <strong>Knowledge Base</strong> to quiz yourself on your specific material</li>
+    <li>Head to <strong>Quiz</strong> when you're ready to be tested — choose Friendly, Standard, or Expert difficulty</li>
+    <li>Customise the personality in <strong>Settings</strong> to change how your buddy talks to you</li>
+  </ol>
 </div>
 """
 
@@ -91,25 +210,22 @@ def save_settings(ai_provider, ai_key, ai_model, tts_provider, elevenlabs_key, g
         key = "ELEVENLABS_VOICE_ID" if tts_provider == "ElevenLabs" else "GOOGLE_TTS_VOICE"
         updates[key] = voice_choice
     if personality.strip():
-        # Store as single line (newlines → \n literal) so .env stays parseable
         updates["PERSONALITY_PROMPT"] = personality.strip().replace("\n", "\\n")
 
     _save_env(**updates)
     _reload_config()
 
-    # Apply personality to live config immediately
     if personality.strip():
         import config as cfg
         cfg.PERSONALITY_PROMPT = personality.strip()
         cfg.SYSTEM_PROMPT = personality.strip()
 
-    return "✓ Settings saved!"
+    return "Settings saved."
 
 
-# ── TTS — returns a temp file path for Gradio 5's Audio component ────────────
+# ── TTS ───────────────────────────────────────────────────────────────────────
 
 def _tts_file(text: str) -> str | None:
-    """Synthesise speech and return a temp .mp3 path, or None if not configured."""
     try:
         import config
         audio_bytes: bytes | None = None
@@ -123,8 +239,7 @@ def _tts_file(text: str) -> str | None:
                 resp = client.synthesize_speech(
                     input=texttospeech.SynthesisInput(text=text),
                     voice=texttospeech.VoiceSelectionParams(
-                        language_code="en-GB",
-                        name=config.GOOGLE_TTS_VOICE,
+                        language_code="en-GB", name=config.GOOGLE_TTS_VOICE,
                     ),
                     audio_config=texttospeech.AudioConfig(
                         audio_encoding=texttospeech.AudioEncoding.MP3,
@@ -155,13 +270,12 @@ def _tts_file(text: str) -> str | None:
     return None
 
 
-def _reachy(fn_name: str, *args):
-    """Call a reachy controller function safely in a background thread."""
+def _reachy(fn_name: str):
     try:
         from reachy import controller
         fn = getattr(controller, fn_name, None)
         if fn:
-            threading.Thread(target=fn, args=args, daemon=True).start()
+            threading.Thread(target=fn, daemon=True).start()
     except Exception:
         pass
 
@@ -171,16 +285,12 @@ def _reachy(fn_name: str, *args):
 def chat_respond(message, history, use_kb, voice_on):
     if not message.strip():
         return history, "", None
-
     _reachy("antenna_thinking")
-
     from ai.client import chat
     reply = chat(message, use_knowledge=use_kb)
-
     _reachy("antenna_happy")
     history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": reply}]
-    audio = _tts_file(reply) if voice_on else None
-    return history, "", audio
+    return history, "", _tts_file(reply) if voice_on else None
 
 
 def reset_chat():
@@ -199,7 +309,7 @@ def add_file(file, name, tags):
     label = name.strip() or os.path.basename(file.name)
     chunks, kind = ingest(file.name)
     count = add_document(chunks, source=label, tags=[t.strip() for t in tags.split(",") if t.strip()])
-    return f"✓ Added **{label}** — {count} chunks ({kind})", _kb_status()
+    return f"Added '{label}' — {count} chunks ({kind})", _kb_status()
 
 
 def add_url(url, name, tags):
@@ -211,7 +321,7 @@ def add_url(url, name, tags):
     try:
         chunks, kind = ingest(url)
         count = add_document(chunks, source=label, tags=[t.strip() for t in tags.split(",") if t.strip()])
-        return f"✓ Added **{label}** — {count} chunks ({kind})", _kb_status()
+        return f"Added '{label}' — {count} chunks ({kind})", _kb_status()
     except Exception as e:
         return f"Error: {e}", _kb_status()
 
@@ -219,7 +329,7 @@ def add_url(url, name, tags):
 def remove_doc(source):
     from knowledge.store import delete_source
     removed = delete_source(source)
-    msg = f"✓ Removed **{source}** ({removed} chunks)" if removed else f"Nothing found: *{source}*"
+    msg = f"Removed '{source}' ({removed} chunks)" if removed else f"Nothing found: {source}"
     return msg, _kb_status()
 
 
@@ -228,13 +338,13 @@ def _kb_status() -> str:
         from knowledge.store import list_sources, count
         sources = list_sources()
         if not sources:
-            return "📭 Knowledge base is empty — I'll use my general knowledge to help you!"
+            return "Your knowledge base is empty. Upload documents above to teach me your specific material — or just start chatting and I'll use my general knowledge."
         total = count()
         rows = "\n".join(
-            f"- **{s['source']}**" + (f" `{s['tags']}`" if s.get("tags") else "")
+            f"- {s['source']}" + (f" ({s['tags']})" if s.get("tags") else "")
             for s in sources
         )
-        return f"**{total} chunks** across {len(sources)} source(s)\n\n{rows}"
+        return f"{total} chunks across {len(sources)} source(s)\n\n{rows}"
     except Exception:
         return "Knowledge base not initialised yet."
 
@@ -254,12 +364,8 @@ def start_quiz(topic, count, difficulty_label, voice_on):
         return str(e), "", gr.update(visible=False), gr.update(visible=False), None
 
     _quiz_state.update({
-        "questions": questions,
-        "idx": 0,
-        "score": 0,
-        "answered": 0,
-        "difficulty": difficulty,
-        "pending_followup": "",
+        "questions": questions, "idx": 0, "score": 0,
+        "answered": 0, "difficulty": difficulty, "pending_followup": "",
     })
     return *_next_q(voice_on), None
 
@@ -269,29 +375,24 @@ def _next_q(voice_on=False):
     idx = _quiz_state.get("idx", 0)
     difficulty = _quiz_state.get("difficulty", "standard")
 
-    # In viva mode, surface a pending follow-up before moving on
     followup = _quiz_state.pop("pending_followup", "") if difficulty == "viva" else ""
     if followup:
-        audio = _tts_file(followup) if voice_on else None
-        return f"**Follow-up** (Question {idx} of {len(qs)})", followup, gr.update(visible=True), gr.update(visible=False)
+        return f"Follow-up (Question {idx} of {len(qs)})", followup, gr.update(visible=True), gr.update(visible=False)
 
     if idx >= len(qs):
         answered = _quiz_state["answered"]
         score = _quiz_state["score"]
         avg = score / answered if answered else 0
         if difficulty == "viva":
-            medal = "Expert level 🎓" if avg >= 8 else "Getting there 💜" if avg >= 6 else "Keep studying 📚"
+            medal = "Expert level" if avg >= 8 else "Getting there" if avg >= 6 else "Keep studying"
         else:
-            medal = "🌸 Excellent!" if avg >= 8 else "💜 Good effort!" if avg >= 5 else "🌷 Keep practising!"
-        summary = f"### Quiz complete!\n**Score: {score}/{answered * 10}** ({avg:.0f}/10 average) — {medal}"
+            medal = "Excellent work!" if avg >= 8 else "Good effort!" if avg >= 5 else "Keep practising!"
+        summary = f"Quiz complete — {score}/{answered * 10} ({avg:.0f}/10 average)\n\n{medal}"
         return summary, "", gr.update(visible=False), gr.update(visible=True)
 
     q = qs[idx]
-    hint_line = f"\n\n*Hint available if needed*" if (difficulty == "friendly" and q.get("hint")) else ""
-    status = f"**Question {idx + 1} of {len(qs)}**"
-    display = q["question"] + hint_line
-    audio = _tts_file(q["question"]) if voice_on else None
-    return status, display, gr.update(visible=True), gr.update(visible=False)
+    hint = f"\n\nHint available — ask for it if you're stuck." if (difficulty == "friendly" and q.get("hint")) else ""
+    return f"Question {idx + 1} of {len(qs)}", q["question"] + hint, gr.update(visible=True), gr.update(visible=False)
 
 
 def submit_answer(user_answer, voice_on):
@@ -313,213 +414,221 @@ def submit_answer(user_answer, voice_on):
     correct = result.get("correct") or score >= 7
     _reachy("antenna_happy" if correct else "antenna_droop")
 
-    feedback = result["feedback"]
     followup = result.get("followup", "")
-
-    # In viva mode, stash follow-up to show before next question
     if difficulty == "viva" and followup and correct:
         _quiz_state["pending_followup"] = followup
 
+    feedback = result["feedback"]
     if not correct and difficulty != "viva":
-        feedback += f"\n\n*Correct answer: {q['answer']}*"
+        feedback += f"\n\nCorrect answer: {q['answer']}"
 
-    prefix = "✓ " if correct else ("" if difficulty == "viva" else "✗ ")
-    feedback_line = prefix + feedback + (f" *(+{score}/10)*" if difficulty != "viva" else f"\n\n*Score: {score}/10*")
+    marker = "Correct. " if correct else ("" if difficulty == "viva" else "Not quite. ")
+    score_note = f" ({score}/10)" if difficulty != "viva" else f"\nScore: {score}/10"
+    feedback_line = marker + feedback + score_note
 
     status, question, ans_vis, done_vis = _next_q(voice_on)
     combined = f"{feedback_line}\n\n---\n\n{question}" if question else feedback_line
-    audio = _tts_file(feedback) if voice_on else None
-    return status, combined, ans_vis, done_vis, audio, ""
+    return status, combined, ans_vis, done_vis, _tts_file(feedback) if voice_on else None, ""
 
 
 # ── Build UI ──────────────────────────────────────────────────────────────────
 
-def build_ui() -> gr.Blocks:
-    with gr.Blocks(theme=theme, css=CSS, title="Learning Buddy 🌸") as demo:
+_PRESETS = {
+    "Warm & encouraging tutor": (
+        "You are a knowledgeable and warm learning companion with a dry British wit "
+        "— think a brilliant tutor who genuinely enjoys helping people understand things. "
+        "You have access to the user's personal knowledge base and can draw on it alongside "
+        "your general knowledge. Be encouraging but honest. Keep responses concise."
+    ),
+    "Strict but fair professor": (
+        "You are a rigorous academic professor. You expect precise answers and correct "
+        "terminology. You do not give empty praise — you acknowledge good work briefly and "
+        "immediately identify what could be sharper. You are not unkind, but you hold high standards."
+    ),
+    "Friendly peer study buddy": (
+        "You are a fellow student who has already mastered this material. You're warm, "
+        "casual, and relatable. You use everyday language, share memory tricks, and "
+        "celebrate wins enthusiastically. You make studying feel less scary."
+    ),
+    "Socratic — guide with questions": (
+        "You teach through questions. When the user asks something, respond with a "
+        "guiding question that helps them discover the answer themselves. Only give "
+        "direct answers when the user is genuinely stuck. Be patient and curious."
+    ),
+}
 
-        gr.Markdown("# 🌸 Learning Buddy")
-        gr.Markdown("*Your AI-powered study companion*")
-        gr.HTML(WELCOME)
+
+def build_ui() -> gr.Blocks:
+    with gr.Blocks(theme=theme, css=CSS, title="Learning Buddy") as demo:
+
+        gr.HTML("""
+        <div class="lb-header">
+            <h1>Learning Buddy</h1>
+            <p>An AI-powered study companion for any subject</p>
+        </div>
+        """)
+
+        with gr.Accordion("How to get started", open=True):
+            gr.HTML(INSTRUCTIONS_HTML)
 
         with gr.Tabs():
 
             # ── Chat ──────────────────────────────────────────────────────────
-            with gr.Tab("💬 Chat"):
-                chatbot = gr.Chatbot(label="", height=400, bubble_full_width=False, type="messages")
-                audio_out = gr.Audio(label="", autoplay=True, visible=True, show_download_button=False)
+            with gr.Tab("Chat"):
+                chatbot = gr.Chatbot(
+                    label="",
+                    height=420,
+                    bubble_full_width=False,
+                    type="messages",
+                    placeholder="Your conversation will appear here. Ask me anything to get started.",
+                )
+                audio_out = gr.Audio(
+                    label="Voice response",
+                    autoplay=True,
+                    visible=True,
+                    show_download_button=False,
+                )
                 with gr.Row():
-                    msg_box = gr.Textbox(placeholder="Ask me anything...", show_label=False, scale=5)
-                    send_btn = gr.Button("Send 🌸", variant="primary", scale=1)
+                    msg_box = gr.Textbox(
+                        placeholder="Ask me anything...",
+                        show_label=False,
+                        scale=5,
+                        lines=1,
+                    )
+                    send_btn = gr.Button("Send", variant="primary", scale=1)
                 with gr.Row():
                     use_kb = gr.Checkbox(value=True, label="Use my knowledge base")
                     voice_on = gr.Checkbox(value=False, label="Voice responses")
-                    reset_btn = gr.Button("Reset chat", variant="secondary")
+                    reset_btn = gr.Button("Clear conversation", variant="secondary")
 
                 send_btn.click(chat_respond, [msg_box, chatbot, use_kb, voice_on], [chatbot, msg_box, audio_out])
                 msg_box.submit(chat_respond, [msg_box, chatbot, use_kb, voice_on], [chatbot, msg_box, audio_out])
                 reset_btn.click(reset_chat, outputs=[chatbot, msg_box, audio_out])
 
             # ── Quiz ──────────────────────────────────────────────────────────
-            with gr.Tab("🎓 Quiz Me"):
+            with gr.Tab("Quiz"):
+                gr.Markdown("Test yourself on your knowledge base, or on any topic using general knowledge.")
                 with gr.Row():
-                    quiz_topic = gr.Textbox(placeholder="Topic (optional — blank = anything in knowledge base)", label="Focus topic", scale=3)
-                    quiz_count = gr.Slider(minimum=3, maximum=20, value=5, step=1, label="Questions", scale=1)
+                    quiz_topic = gr.Textbox(
+                        placeholder="e.g. photosynthesis, the French Revolution, machine learning (leave blank for mixed)",
+                        label="Topic",
+                        scale=3,
+                    )
+                    quiz_count = gr.Slider(minimum=3, maximum=20, value=5, step=1, label="Number of questions", scale=1)
 
-                gr.Markdown("### Difficulty")
                 quiz_difficulty = gr.Radio(
                     choices=["Friendly", "Standard", "Expert"],
                     value="Standard",
-                    label="",
-                    info="Friendly = hints & encouragement · Standard = balanced · Expert = deep questions, no hints, follow-up challenges",
+                    label="Difficulty",
+                    info="Friendly: hints and encouragement  ·  Standard: balanced feedback  ·  Expert: analytical questions, no hints, follow-up challenges",
                 )
                 quiz_voice = gr.Checkbox(value=False, label="Read questions aloud")
-                start_btn  = gr.Button("Start quiz ✨", variant="primary")
+                start_btn = gr.Button("Start quiz", variant="primary")
 
                 quiz_status  = gr.Markdown("")
                 quiz_display = gr.Markdown("")
                 quiz_audio   = gr.Audio(label="", autoplay=True, visible=False, show_download_button=False)
 
                 with gr.Column(visible=False) as answer_col:
-                    answer_box  = gr.Textbox(placeholder="Your answer...", label="Your answer", lines=2)
-                    submit_btn  = gr.Button("Submit answer 💜", variant="primary")
+                    answer_box = gr.Textbox(placeholder="Type your answer here...", label="Your answer", lines=2)
+                    submit_btn = gr.Button("Submit answer", variant="primary")
 
                 with gr.Column(visible=False) as done_col:
-                    restart_btn = gr.Button("New quiz 🌸", variant="secondary")
+                    restart_btn = gr.Button("Start a new quiz", variant="secondary")
 
-                start_btn.click(
-                    start_quiz,
-                    [quiz_topic, quiz_count, quiz_difficulty, quiz_voice],
-                    [quiz_status, quiz_display, answer_col, done_col, quiz_audio],
-                )
-                submit_btn.click(
-                    submit_answer,
-                    [answer_box, quiz_voice],
-                    [quiz_status, quiz_display, answer_col, done_col, quiz_audio, answer_box],
-                )
-                restart_btn.click(
-                    start_quiz,
-                    [quiz_topic, quiz_count, quiz_difficulty, quiz_voice],
-                    [quiz_status, quiz_display, answer_col, done_col, quiz_audio],
-                )
+                start_btn.click(start_quiz, [quiz_topic, quiz_count, quiz_difficulty, quiz_voice], [quiz_status, quiz_display, answer_col, done_col, quiz_audio])
+                submit_btn.click(submit_answer, [answer_box, quiz_voice], [quiz_status, quiz_display, answer_col, done_col, quiz_audio, answer_box])
+                restart_btn.click(start_quiz, [quiz_topic, quiz_count, quiz_difficulty, quiz_voice], [quiz_status, quiz_display, answer_col, done_col, quiz_audio])
 
-            # ── Knowledge base ────────────────────────────────────────────────
-            with gr.Tab("📚 Knowledge Base"):
+            # ── Knowledge Base ────────────────────────────────────────────────
+            with gr.Tab("Knowledge Base"):
+                gr.Markdown(
+                    "Upload your own material to make Learning Buddy an expert on your specific subject. "
+                    "Without any documents it will use its general knowledge, which is often enough to get started."
+                )
                 kb_display = gr.Markdown(_kb_status())
-                gr.Markdown("*Without any documents I'll use my general knowledge — upload your own to make me an expert on your specific material.*")
 
-                gr.Markdown("### ➕ Add documents")
+                gr.Markdown("### Add material")
                 with gr.Tabs():
-                    with gr.Tab("Upload file"):
+                    with gr.Tab("Upload a file"):
                         file_input = gr.File(file_types=[".pdf", ".md", ".txt"], label="PDF, Markdown or plain text")
                         with gr.Row():
-                            file_name = gr.Textbox(placeholder="Friendly name (optional)", label="Name", scale=2)
+                            file_name = gr.Textbox(placeholder="Give it a name (optional)", label="Name", scale=2)
                             file_tags = gr.Textbox(placeholder="e.g.  msc, biology", label="Tags", scale=2)
-                        file_btn = gr.Button("Add to knowledge base 📎", variant="primary")
+                        file_btn = gr.Button("Add to knowledge base", variant="primary")
 
-                    with gr.Tab("Fetch from URL"):
+                    with gr.Tab("Fetch from a URL"):
                         url_input = gr.Textbox(placeholder="https://...", label="URL")
                         with gr.Row():
-                            url_name = gr.Textbox(placeholder="Friendly name (optional)", label="Name", scale=2)
+                            url_name = gr.Textbox(placeholder="Give it a name (optional)", label="Name", scale=2)
                             url_tags = gr.Textbox(placeholder="e.g.  papers, msc", label="Tags", scale=2)
-                        url_btn = gr.Button("Fetch & add 🌐", variant="primary")
+                        url_btn = gr.Button("Fetch and add", variant="primary")
 
                 kb_msg = gr.Markdown("")
                 file_btn.click(add_file, [file_input, file_name, file_tags], [kb_msg, kb_display])
-                url_btn.click(add_url,   [url_input, url_name, url_tags],    [kb_msg, kb_display])
+                url_btn.click(add_url, [url_input, url_name, url_tags], [kb_msg, kb_display])
 
-                gr.Markdown("### ➖ Remove a document")
+                gr.Markdown("### Remove material")
                 with gr.Row():
-                    remove_name = gr.Textbox(placeholder="Exact source name to remove", label="", scale=3)
-                    remove_btn  = gr.Button("Remove 🗑️", variant="stop", scale=1)
+                    remove_name = gr.Textbox(placeholder="Enter the exact source name to remove", label="", scale=3)
+                    remove_btn  = gr.Button("Remove", variant="stop", scale=1)
                 remove_msg = gr.Markdown("")
                 remove_btn.click(remove_doc, [remove_name], [remove_msg, kb_display])
 
             # ── Settings ──────────────────────────────────────────────────────
-            with gr.Tab("⚙️ Settings"):
-                gr.Markdown("### 🌸 Personality")
-                gr.Markdown("*Describe how you want your buddy to act. This shapes every response.*")
+            with gr.Tab("Settings"):
+
+                gr.Markdown("### Personality")
+                gr.Markdown("Choose how your learning buddy communicates with you.")
                 personality_preset = gr.Dropdown(
-                    choices=[
-                        "Warm & encouraging tutor (default)",
-                        "Strict but fair professor",
-                        "Friendly peer study buddy",
-                        "Socratic — answers questions with questions",
-                        "Custom (edit below)",
-                    ],
-                    value="Warm & encouraging tutor (default)",
+                    choices=list(_PRESETS.keys()) + ["Custom"],
+                    value="Warm & encouraging tutor",
                     label="Preset",
                 )
                 personality_box = gr.Textbox(
-                    value=(
-                        "You are a knowledgeable and warm learning companion with a dry British wit "
-                        "— think a brilliant tutor who genuinely enjoys helping people understand things. "
-                        "You have access to the user's personal knowledge base and can draw on it alongside "
-                        "your general knowledge. Be encouraging but honest. Keep responses concise."
-                    ),
-                    label="Personality prompt (fully editable)",
-                    lines=4,
-                    placeholder="Describe your buddy's personality, tone, and teaching style...",
+                    value=_PRESETS["Warm & encouraging tutor"],
+                    label="Personality prompt — edit freely",
+                    lines=3,
+                    placeholder="Describe your buddy's personality and teaching style...",
                 )
-
-                _PRESETS = {
-                    "Warm & encouraging tutor (default)": (
-                        "You are a knowledgeable and warm learning companion with a dry British wit "
-                        "— think a brilliant tutor who genuinely enjoys helping people understand things. "
-                        "You have access to the user's personal knowledge base and can draw on it alongside "
-                        "your general knowledge. Be encouraging but honest. Keep responses concise."
-                    ),
-                    "Strict but fair professor": (
-                        "You are a rigorous academic professor. You expect precise answers and correct "
-                        "terminology. You do not give empty praise — you acknowledge good work briefly and "
-                        "immediately identify what could be sharper. You are not unkind, but you hold high standards."
-                    ),
-                    "Friendly peer study buddy": (
-                        "You are a fellow student who has already mastered this material. You're warm, "
-                        "casual, and relatable. You use everyday language, share memory tricks, and "
-                        "celebrate wins enthusiastically. You make studying feel less scary."
-                    ),
-                    "Socratic — answers questions with questions": (
-                        "You teach through questions. When the user asks something, respond with a "
-                        "guiding question that helps them discover the answer themselves. Only give "
-                        "direct answers when the user is genuinely stuck. Be patient and curious."
-                    ),
-                    "Custom (edit below)": "",
-                }
 
                 def _apply_preset(choice):
                     return _PRESETS.get(choice, "")
 
                 personality_preset.change(_apply_preset, personality_preset, personality_box)
 
-                gr.Markdown("### 🤖 AI Provider")
-                gr.Markdown("*Pick whichever AI you have a key for — they all work the same way.*")
+                gr.Markdown("### AI provider")
+                gr.Markdown("Pick whichever service you have an API key for. Gemini has a free tier — get a key at aistudio.google.com.")
                 with gr.Row():
                     ai_provider = gr.Dropdown(choices=["Gemini", "Anthropic", "OpenAI"], value="Gemini", label="Provider", scale=1)
-                    ai_key      = gr.Textbox(placeholder="Paste API key here", label="API Key", type="password", scale=3)
-                ai_model = gr.Textbox(placeholder="Optional model override (e.g. gemini-2.0-flash, gpt-4o-mini)", label="Model")
+                    ai_key = gr.Textbox(placeholder="Paste your API key", label="API key", type="password", scale=3)
+                ai_model = gr.Textbox(
+                    placeholder="Optional — leave blank for the default model (e.g. gemini-2.0-flash, gpt-4o-mini)",
+                    label="Model override",
+                )
 
-                gr.Markdown("### 🗣️ Voice")
-                gr.Markdown("*Optional — leave blank to use text-only mode.*")
+                gr.Markdown("### Voice")
+                gr.Markdown("Optional. Leave blank to use text-only mode.")
                 with gr.Row():
-                    tts_provider    = gr.Dropdown(choices=["Google", "ElevenLabs"], value="Google", label="TTS Provider", scale=1)
-                    elevenlabs_key  = gr.Textbox(placeholder="ElevenLabs API key (if using ElevenLabs)", label="ElevenLabs Key", type="password", scale=2)
-                    google_tts_key  = gr.Textbox(placeholder="Google API key (if using Google TTS)", label="Google TTS Key", type="password", scale=2)
+                    tts_provider   = gr.Dropdown(choices=["Google", "ElevenLabs"], value="Google", label="Voice provider", scale=1)
+                    elevenlabs_key = gr.Textbox(placeholder="ElevenLabs API key (only if using ElevenLabs)", label="ElevenLabs key", type="password", scale=2)
+                    google_tts_key = gr.Textbox(placeholder="Google API key (only if using Google TTS)", label="Google TTS key", type="password", scale=2)
                 voice_choice = gr.Dropdown(
                     choices=[
-                        ("🇬🇧 en-GB-Journey-F — warm, natural RP female", "en-GB-Journey-F"),
-                        ("🇬🇧 en-GB-Neural2-C — crisp, elegant RP female", "en-GB-Neural2-C"),
-                        ("🇬🇧 en-GB-Neural2-A — softer British female", "en-GB-Neural2-A"),
-                        ("Custom / ElevenLabs voice ID", "custom"),
+                        ("British female — warm and natural (recommended)", "en-GB-Journey-F"),
+                        ("British female — crisp and clear", "en-GB-Neural2-C"),
+                        ("British female — softer tone", "en-GB-Neural2-A"),
+                        ("Custom ElevenLabs voice ID", "custom"),
                     ],
                     value="en-GB-Journey-F",
                     label="Voice",
                 )
 
-                gr.Markdown("### 🤖 Reachy Mini")
-                gr.Markdown("*Only needed if running alongside a physical Reachy Mini.*")
-                reachy_host = gr.Textbox(value="reachy.local", label="Reachy hostname / IP")
+                gr.Markdown("### Reachy Mini")
+                gr.Markdown("Only needed if running alongside a physical Reachy Mini robot.")
+                reachy_host = gr.Textbox(value="reachy.local", label="Reachy hostname or IP address")
 
-                save_btn    = gr.Button("Save settings 💾", variant="primary")
+                save_btn    = gr.Button("Save settings", variant="primary")
                 save_status = gr.Markdown("")
                 save_btn.click(
                     save_settings,
