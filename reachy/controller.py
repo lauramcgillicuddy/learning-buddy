@@ -145,6 +145,35 @@ def thinking_context():
         speaking()
 
 
+def play_audio(wav_bytes: bytes) -> None:
+    """Play WAV audio through Reachy's built-in speaker."""
+    if not _connected or not _reachy:
+        return
+    try:
+        import io
+        import soundfile as sf
+
+        data, samplerate = sf.read(io.BytesIO(wav_bytes), dtype="float32")
+        # Convert to mono
+        if data.ndim == 2:
+            data = np.mean(data, axis=1)
+        # Resample to 16 kHz if needed
+        if samplerate != 16000:
+            ratio = 16000 / samplerate
+            n = int(len(data) * ratio)
+            data = np.interp(np.linspace(0, len(data) - 1, n), np.arange(len(data)), data)
+        # Reachy expects shape (n, 1)
+        samples = data.reshape(-1, 1).astype(np.float32)
+        duration = len(samples) / 16000.0
+
+        _reachy.media.start_playing()
+        _reachy.media.push_audio_sample(samples)
+        time.sleep(duration)
+        _reachy.media.stop_playing()
+    except Exception as e:
+        print(f"[Reachy] Speaker error: {e}")
+
+
 def record_audio(duration: float = 6.0) -> "np.ndarray | None":
     """Record audio from Reachy's built-in microphone array.
 
