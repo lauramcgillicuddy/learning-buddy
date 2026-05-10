@@ -16,12 +16,43 @@ def connect() -> bool:
         from reachy_sdk import ReachySDK
         _reachy = ReachySDK(host=config.REACHY_HOST)
         _connected = True
+        print(f"[Reachy] Connected to {config.REACHY_HOST}")
+        # Run startup sequence in background so it doesn't block the UI
+        threading.Thread(target=startup_sequence, daemon=True).start()
         return True
     except Exception as e:
         print(f"[Reachy] Could not connect to {config.REACHY_HOST}: {e}")
-        print("[Reachy] Running without robot — voice + CLI still work.")
+        print("[Reachy] Running without robot — voice and UI still work.")
         _connected = False
         return False
+
+
+def startup_sequence() -> None:
+    """Play on startup to signal Reachy is awake and ready."""
+    def _do():
+        time.sleep(0.5)  # small pause to let the SDK settle
+        # Gentle head raise
+        _reachy.head.neck_pitch.goal_position = -5
+        time.sleep(0.4)
+        _reachy.head.neck_pitch.goal_position = 0
+        time.sleep(0.3)
+        # Happy antenna wiggle
+        for _ in range(3):
+            _reachy.joints["l_antenna"].goal_position = 30
+            _reachy.joints["r_antenna"].goal_position = -30
+            time.sleep(0.15)
+            _reachy.joints["l_antenna"].goal_position = -30
+            _reachy.joints["r_antenna"].goal_position = 30
+            time.sleep(0.15)
+        # Return to neutral
+        _reachy.joints["l_antenna"].goal_position = 0
+        _reachy.joints["r_antenna"].goal_position = 0
+        time.sleep(0.3)
+        # Single nod: "ready!"
+        _reachy.head.neck_pitch.goal_position = 8
+        time.sleep(0.25)
+        _reachy.head.neck_pitch.goal_position = 0
+    _safe(_do)
 
 
 def is_connected() -> bool:

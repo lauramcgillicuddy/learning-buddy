@@ -493,6 +493,7 @@ def build_ui() -> gr.Blocks:
             <p>An AI-powered study companion for any subject</p>
         </div>
         """)
+        reachy_status = gr.HTML(_reachy_status_html())
 
         with gr.Accordion("How to get started", open=True):
             gr.HTML(INSTRUCTIONS_HTML)
@@ -654,6 +655,20 @@ def build_ui() -> gr.Blocks:
                 gr.Markdown("Only needed if running alongside a physical Reachy Mini robot.")
                 reachy_host = gr.Textbox(value="reachy.local", label="Reachy hostname or IP address")
 
+                def _reconnect_reachy(host):
+                    try:
+                        import config as cfg
+                        cfg.REACHY_HOST = host
+                        from reachy import controller
+                        success = controller.connect()
+                        return _reachy_status_html(), "Connected!" if success else "Could not connect — check hostname and that Reachy is on the same network."
+                    except Exception as e:
+                        return _reachy_status_html(), f"Error: {e}"
+
+                reconnect_btn = gr.Button("Connect to Reachy", variant="secondary")
+                reconnect_status = gr.Markdown("")
+                reconnect_btn.click(_reconnect_reachy, [reachy_host], [reachy_status, reconnect_status])
+
                 save_btn    = gr.Button("Save settings", variant="primary")
                 save_status = gr.Markdown("")
                 save_btn.click(
@@ -663,6 +678,16 @@ def build_ui() -> gr.Blocks:
                 )
 
     return demo
+
+
+def _reachy_status_html() -> str:
+    try:
+        from reachy import controller
+        if controller.is_connected():
+            return '<p style="color:#6B9E6B; font-size:0.85rem; margin:0;">&#9679; Reachy connected</p>'
+    except Exception:
+        pass
+    return '<p style="color:#B0A0A8; font-size:0.85rem; margin:0;">&#9675; Reachy not connected — running in web-only mode</p>'
 
 
 def launch(share: bool = False):
