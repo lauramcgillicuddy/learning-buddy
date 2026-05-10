@@ -9,6 +9,7 @@ import config
 
 _reachy = None
 _connected = False
+_recording = False
 
 
 def connect() -> bool:
@@ -145,6 +146,30 @@ def thinking_context():
         speaking()
 
 
+def start_audio_session() -> None:
+    """Open Reachy's mic once for the whole voice loop session."""
+    global _recording
+    if not _connected or not _reachy or _recording:
+        return
+    try:
+        _reachy.media.start_recording()
+        _recording = True
+        time.sleep(2.5)  # let WebRTC audio chain settle before first capture
+        print("[Reachy] Microphone ready")
+    except Exception as e:
+        print(f"[Reachy] Could not open mic: {e}")
+
+
+def stop_audio_session() -> None:
+    global _recording
+    if _connected and _reachy and _recording:
+        try:
+            _reachy.media.stop_recording()
+        except Exception:
+            pass
+        _recording = False
+
+
 def play_audio(wav_bytes: bytes) -> None:
     """Play WAV audio through Reachy's built-in speaker."""
     if not _connected or not _reachy:
@@ -175,26 +200,24 @@ def play_audio(wav_bytes: bytes) -> None:
 
 
 def record_audio(duration: float = 6.0) -> "np.ndarray | None":
-    """Record audio from Reachy's built-in microphone array.
+    """Capture audio from Reachy's mic for `duration` seconds.
 
+    Requires start_audio_session() to have been called first.
     Returns mono float32 numpy array at 16 kHz, or None if unavailable.
     """
-    if not _connected or not _reachy:
+    if not _connected or not _reachy or not _recording:
         return None
     try:
         chunks = []
-        _reachy.media.start_recording()
         deadline = time.time() + duration
         while time.time() < deadline:
             samples = _reachy.media.get_audio_sample()
             if samples is not None:
                 chunks.append(samples)
             time.sleep(0.05)
-        _reachy.media.stop_recording()
         if not chunks:
             return None
         audio = np.concatenate(chunks, axis=0)
-        # Reachy mic is stereo — average to mono for Whisper
         if audio.ndim == 2:
             audio = np.mean(audio, axis=1)
         return audio.astype(np.float32)

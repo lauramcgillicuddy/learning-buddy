@@ -3,7 +3,7 @@
 import threading
 from reachy import controller
 from ai.client import chat, reset_conversation
-from voice.stt import transcribe, listen as local_listen
+from voice.stt import transcribe, listen as local_listen, _load_model
 from voice.tts import speak
 
 
@@ -26,32 +26,44 @@ def run(wake_word: str = "hey buddy", duration: float = 6.0):
     Press Ctrl+C to stop.
     """
     reset_conversation()
+
+    # Pre-warm Whisper so the first response isn't slow
+    print("[Learning Buddy] Loading speech model...")
+    _load_model()
+
+    # Open Reachy's mic once for the whole session (WebRTC needs ~2s to settle)
+    controller.start_audio_session()
+
     print("[Learning Buddy] Voice loop started — start talking!")
     print("[Learning Buddy] Press Ctrl+C to stop.\n")
 
-    while True:
-        try:
-            controller.listening_pose()
-            print(f"[Listening for {duration:.0f}s...]")
-            text = _listen(duration=duration)
+    try:
+        while True:
+            try:
+                controller.listening_pose()
+                print(f"[Listening for {duration:.0f}s...]")
+                text = _listen(duration=duration)
 
-            if not text.strip():
+                if not text.strip():
+                    print("[heard nothing — listening again]")
+                    continue
+
+                print(f"You: {text}")
+
+                threading.Thread(target=controller.antenna_thinking, daemon=True).start()
+                reply = chat(text)
+                print(f"Buddy: {reply}\n")
+
+                controller.speaking()
+                speak(reply)
+
+                threading.Thread(target=controller.nod, args=(1,), daemon=True).start()
+
+            except Exception as e:
+                print(f"[Error] {e}")
                 continue
 
-            print(f"You: {text}")
-
-            threading.Thread(target=controller.antenna_thinking, daemon=True).start()
-            reply = chat(text)
-            print(f"Buddy: {reply}\n")
-
-            controller.speaking()
-            speak(reply)
-
-            threading.Thread(target=controller.nod, args=(1,), daemon=True).start()
-
-        except KeyboardInterrupt:
-            print("\n[Learning Buddy] Voice loop stopped.")
-            break
-        except Exception as e:
-            print(f"[Error] {e}")
-            continue
+    except KeyboardInterrupt:
+        print("\n[Learning Buddy] Voice loop stopped.")
+    finally:
+        controller.stop_audio_session()
